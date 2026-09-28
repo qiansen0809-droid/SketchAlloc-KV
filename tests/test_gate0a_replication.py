@@ -78,3 +78,35 @@ def test_legality_audit_rejects_bad_fixed_action(tmp_path):
         assert "No replication labels were computed" in str(exc)
     else:
         raise AssertionError("expected frozen action legality failure")
+
+
+def test_balanced_sampler_allows_one_exhausted_task():
+    from evaluation.sketchalloc.prepare_gate0a_replication import _select_balanced_from_pools
+
+    def row(task, idx, tokens):
+        return {
+            "task": task,
+            "source_index": idx,
+            "context_tokens": tokens,
+            "context_sha256": f"{task}-{idx}",
+        }
+
+    pools = {
+        "narrativeqa": [],
+        "qasper": [row("qasper", i, 8192 + i) for i in range(8)],
+        "multifieldqa_en": [row("multifieldqa_en", i, 8192 - i) for i in range(8)],
+    }
+
+    selected, diag = _select_balanced_from_pools(
+        pools,
+        ["narrativeqa", "qasper", "multifieldqa_en"],
+        target=8192,
+        total_size=8,
+    )
+
+    assert len(selected) == 8
+    assert diag["excluded_tasks_insufficient_fresh_support"] == {"narrativeqa": 0}
+    assert diag["selected_task_counts"] == {
+        "qasper": 4,
+        "multifieldqa_en": 4,
+    }
