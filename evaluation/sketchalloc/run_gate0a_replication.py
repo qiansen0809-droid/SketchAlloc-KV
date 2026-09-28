@@ -242,6 +242,11 @@ def main() -> None:
                 f"{row['id']}: tokenizer length drift {context_len} != stored {row['context_tokens']}"
             )
 
+        # IMPORTANT: the previous prompt leaves its final candidate override
+        # installed on the shared LUPress instance. Clear it before reading the
+        # static LU curve for this prompt, otherwise the next prompt can inherit
+        # stale per-head keep counts from a different sequence length.
+        press.clear_keep_counts_override()
         baseline = curve_budget(press, model, context_len)
         min_keep = min(context_len, press.sink + press.window)
 
@@ -308,6 +313,7 @@ def main() -> None:
         out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"[Gate0A] saved {out_path}")
 
+        press.clear_keep_counts_override()
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
