@@ -37,7 +37,7 @@ complete rectangular matrix.
 
 Research scaffold for **sparse active identification of prompt-conditioned KV-cache allocation utility**.
 
-Status: Gate 0A confirmatory GO; Gate 0B structural testing is next. No SOTA or physical-memory claim is made yet.
+Status: Gate 0A confirmatory GO; Gate 0B half-scale structural testing is implemented on `gate0b-execution`. No SOTA or physical-memory claim is made yet.
 
 ## Core question
 
@@ -97,3 +97,22 @@ This command is only a structural upper bound: it assumes the true utility of th
 ```bash
 pytest tests/test_sketchalloc_rank.py tests/test_gate0_candidates.py tests/test_gate0_marginals.py tests/test_gate0_metrics.py
 ```
+
+
+## Gate 0B half-scale
+
+Gate 0B starts with a compute-saving 48-prompt x 12-fixed-action structural
+diagnostic before the formal 96 x 24 matrix.
+
+Entry points:
+
+```bash
+python -m evaluation.sketchalloc.prepare_gate0b_half --help
+python -m evaluation.sketchalloc.build_gate0b_actions --help
+python -m evaluation.sketchalloc.run_gate0b_matrix --help
+python -m evaluation.sketchalloc.analyze_gate0b_half --help
+```
+
+See `docs/gate0b_halfscale_runbook.md` for the frozen sampling, action-selection,
+rank-selection, and expansion criteria. The held-out coordinate reconstruction
+is an optimistic structural upper bound and is not an online selector.
