@@ -8,7 +8,7 @@
 >
 > 目标：利用可复用的旧资产准备实验，依次检验动态分配必要性、效用结构和少量探针的可识别性，再决定是否投入完整实现。
 
-> 当前状态：**Gate 0A 已正式 GO，Gate 0B 半规模结构诊断已冻结并开始执行。** 独立 confirmatory 24×5 固定动作矩阵满足预注册的 oracle-vs-best-fixed、family-static、cross-over 与 drop-one-family 方向稳定性条件。Gate 0B 先执行 48×12 算力止损诊断，只有通过后才扩到正式 96×24。详见 `docs/gate0a_confirmatory_result_2026-09-28.md` 与 `docs/gate0b_halfscale_runbook.md`。
+> 当前状态：**Gate 0A 正式 GO；Gate 0B 半规模 48×12 结构诊断 NO-GO，不扩到正式 96×24，也不进入 Gate 0C。** family-centered held-out rank-4 仅达到 R²=0.580、Spearman=0.497、regret/headroom=0.521，未满足预冻结阈值。高秩 7–8 有结构，但不符合当前 rank≤4 的 SketchAlloc 低秩假设。详见 `docs/gate0b_halfscale_result_2026-09-28.md`。
 
 ## 0. 总判定逻辑
 
