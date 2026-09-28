@@ -31,6 +31,8 @@ class Gate0ASummary:
     lopo_best_fixed_mean_gain: float | None = None
     lopo_family_static_mean_gain: float | None = None
     lofo_best_fixed_mean_gain: float | None = None
+    drop_one_family_oracle_minus_best_fixed_mean: dict[str, float] | None = None
+    drop_one_family_direction_all_positive: bool | None = None
     oracle_minus_best_fixed_mean: float | None = None
     oracle_minus_best_fixed_ci95: list[float] | None = None
     oracle_minus_family_static_mean: float | None = None
@@ -173,6 +175,25 @@ def evaluate_gate0a(frame: pd.DataFrame, n_bootstrap: int = 5000, seed: int = 20
         action_idx = _choose_with_lu(matrix[train_mask].mean(axis=0)) if train_mask.any() else -1
         lofo[test_mask] = [_selected_gain(row, action_idx) for row in matrix[test_mask]]
 
+    drop_one_family: dict[str, float] = {}
+    for dropped_family in sorted(set(family_values)):
+        keep_mask = family_values != dropped_family
+        kept = matrix[keep_mask]
+        if kept.shape[0] < 2:
+            continue
+
+        kept_oracle = np.maximum(0.0, np.max(kept, axis=1))
+        kept_lopo = np.empty(kept.shape[0], dtype=np.float64)
+        for i in range(kept.shape[0]):
+            train_mask = np.ones(kept.shape[0], dtype=bool)
+            train_mask[i] = False
+            fixed_idx = _choose_with_lu(kept[train_mask].mean(axis=0))
+            kept_lopo[i] = _selected_gain(kept[i], fixed_idx)
+
+        drop_one_family[str(dropped_family)] = float(
+            np.mean(kept_oracle - kept_lopo)
+        )
+
     diff_fixed = oracle_gain - lopo_fixed
     diff_family = oracle_gain - lopo_family
     oracle_mean = float(np.mean(oracle_gain))
@@ -197,6 +218,10 @@ def evaluate_gate0a(frame: pd.DataFrame, n_bootstrap: int = 5000, seed: int = 20
     base.lopo_best_fixed_mean_gain = fixed_mean
     base.lopo_family_static_mean_gain = family_mean
     base.lofo_best_fixed_mean_gain = float(np.mean(lofo))
+    base.drop_one_family_oracle_minus_best_fixed_mean = drop_one_family
+    base.drop_one_family_direction_all_positive = bool(
+        drop_one_family and all(value > 0.0 for value in drop_one_family.values())
+    )
     base.oracle_minus_best_fixed_mean = float(np.mean(diff_fixed))
     base.oracle_minus_best_fixed_ci95 = fixed_ci
     base.oracle_minus_family_static_mean = float(np.mean(diff_family))
