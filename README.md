@@ -72,14 +72,14 @@ This command is only a structural upper bound: it assumes the true utility of th
 
 ## Current limitations
 
-- Server result artifacts have not yet been migrated into this local repository.
+- The imported legacy backup contains an LU marginal profile and SQuALITY
+  calibration data, but no per-prompt intervention outcomes. Gate 0A has not
+  produced a Go/No-Go result.
 - The inherited LU path uses logical masking; physical KV-page savings remain a separate Gate -1.
 - The active local probe extractor is not implemented until the structural gates pass.
-- GitHub private remote creation is pending because no authenticated GitHub connector/CLI is available in the current environment.
 
 ## Tests
 
 ```bash
 pytest tests/test_sketchalloc_rank.py tests/test_gate0_candidates.py tests/test_gate0_marginals.py tests/test_gate0_metrics.py
 ```
-
