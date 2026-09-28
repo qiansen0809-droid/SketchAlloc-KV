@@ -37,7 +37,7 @@ complete rectangular matrix.
 
 Research scaffold for **sparse active identification of prompt-conditioned KV-cache allocation utility**.
 
-Status: Gate 0A confirmatory GO; Gate 0B half-scale structural testing is implemented on `gate0b-execution`. No SOTA or physical-memory claim is made yet.
+Status: Gate 0A confirmatory GO; Gate 0B half-scale structural diagnostic is NO-GO for the current rank<=4 low-rank hypothesis, so the project does not expand to 96x24 or Gate 0C in its current form. No SOTA or physical-memory claim is made.
 
 ## Core question
 
