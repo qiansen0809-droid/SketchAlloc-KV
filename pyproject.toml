@@ -32,6 +32,8 @@ eval = [
     "scipy>=1.13.1,<2",
     "fire>=0.6.0,<0.7",
     "bert-score>=0.3.13,<0.4",
+    "jieba>=0.42.1,<1",
+    "fuzzywuzzy>=0.18.0,<1",
 ]
 flash-attn = [
     "flash-attn"
@@ -78,7 +80,7 @@ skip = ["venv", ".venv"]
 
 [tool.mypy]
 ignore_missing_imports = true
-allow_redefinition = true
+allow_redefinition = false
 strict_optional = false
 exclude = "(.eggs|.git|.hg|.mypy_cache|.nox|.tox|venv|.venv|doc-venv|.svn|_build|buck-out|build|dist|notebooks|tools|tmp|tests|bundles|.pytest_cache|reports)"
 disable_error_code = ["union-attr", "operator", "call-overload", "arg-type"]
