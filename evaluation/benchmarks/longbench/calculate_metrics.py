@@ -195,7 +195,7 @@ def rouge_zh_score(prediction, ground_truth, **kwargs):
     if jieba is None:
         raise ImportError(
             "LongBench Chinese metrics require jieba. Install evaluation extras with "
-            "'python -m pip install -e ".[eval]"'."
+            "python -m pip install -e .[eval]"
         )
     prediction = " ".join(list(jieba.cut(prediction, cut_all=False)))
     ground_truth = " ".join(list(jieba.cut(ground_truth, cut_all=False)))
@@ -227,7 +227,7 @@ def qa_f1_zh_score(prediction, ground_truth, **kwargs):
     if jieba is None:
         raise ImportError(
             "LongBench Chinese metrics require jieba. Install evaluation extras with "
-            "'python -m pip install -e ".[eval]"'."
+            "python -m pip install -e .[eval]"
         )
     prediction_tokens = list(jieba.cut(prediction, cut_all=False))
     ground_truth_tokens = list(jieba.cut(ground_truth, cut_all=False))
