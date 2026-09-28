@@ -154,7 +154,7 @@ def code_sim_score(prediction, ground_truth, **kwargs):
     if fuzz is None:
         raise ImportError(
             "LongBench code metrics require fuzzywuzzy. Install evaluation extras with "
-            "'python -m pip install -e ".[eval]"'."
+            "'python -m pip install -e \".[eval]\"'."
         )
     all_lines = prediction.lstrip("\n").split("\n")
     prediction = ""
