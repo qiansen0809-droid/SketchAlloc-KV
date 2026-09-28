@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -115,12 +116,9 @@ def build_command(
     spec: RunSpec,
     model: str,
     device: str,
-    longbench_path: str | None,
-    ruler_path: str | None,
     fraction: float,
 ) -> list[str]:
-    dataset_path = longbench_path if spec.dataset == "longbench" else ruler_path
-    cmd = [
+    return [
         sys.executable,
         "evaluation/evaluate.py",
         "--dataset", spec.dataset,
@@ -134,15 +132,29 @@ def build_command(
         "--fraction", str(fraction),
         "--seed", "20260928",
     ]
-    if dataset_path:
-        cmd += ["--dataset_path", dataset_path]
-    return cmd
 
 
-def append_manifest(path: Path, spec: RunSpec, command: list[str]) -> None:
+def build_env(longbench_path: str | None, ruler_path: str | None) -> dict[str, str]:
+    env = os.environ.copy()
+    if longbench_path:
+        env["SKETCHALLOC_LONGBENCH_PATH"] = longbench_path
+    if ruler_path:
+        env["SKETCHALLOC_RULER_PATH"] = ruler_path
+    return env
+
+
+def append_manifest(
+    path: Path,
+    spec: RunSpec,
+    command: list[str],
+    longbench_path: str | None,
+    ruler_path: str | None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = asdict(spec)
     payload["command"] = command
+    payload["longbench_path"] = longbench_path
+    payload["ruler_path"] = ruler_path
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
@@ -152,8 +164,8 @@ def main() -> None:
     p.add_argument("--model", required=True)
     p.add_argument("--profile", action="append", type=parse_profile, required=True,
                    help="Repeatable NAME=/path/to/curve.npy")
-    p.add_argument("--longbench-path")
-    p.add_argument("--ruler-path")
+    p.add_argument("--longbench-path", help="Override the LongBench dataset root for this run.")
+    p.add_argument("--ruler-path", help="Override the RULER dataset root for this run.")
     p.add_argument("--dimension", choices=["domain", "length", "compression", "all"], default="all")
     p.add_argument("--mode", choices=["screening", "full"], default="screening")
     p.add_argument("--device", default="cuda:0")
@@ -175,22 +187,33 @@ def main() -> None:
     if args.execute and manifest.exists():
         manifest.unlink()
 
+    env = build_env(args.longbench_path, args.ruler_path)
+
     print(f"Planned runs: {len(specs)}")
+    if args.longbench_path:
+        print(f"LongBench root: {args.longbench_path}")
+    if args.ruler_path:
+        print(f"RULER root: {args.ruler_path}")
+
     for idx, spec in enumerate(specs, 1):
         cmd = build_command(
             spec,
             model=args.model,
             device=args.device,
-            longbench_path=args.longbench_path,
-            ruler_path=args.ruler_path,
             fraction=args.fraction,
         )
         print(f"[{idx:03d}/{len(specs):03d}] {spec.run_id}")
         print("  " + " ".join(cmd))
         if args.execute:
-            append_manifest(manifest, spec, cmd)
+            append_manifest(
+                manifest,
+                spec,
+                cmd,
+                longbench_path=args.longbench_path,
+                ruler_path=args.ruler_path,
+            )
             Path(spec.run_root).mkdir(parents=True, exist_ok=True)
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, env=env)
 
     if args.execute:
         print(f"Manifest: {manifest}")
