@@ -152,3 +152,34 @@ It does not show:
 - real physical KV memory is saved
 
 Those remain Gate 0C and Gate -1 questions.
+
+
+## Frozen half48 sampling realization
+
+Before any Gate 0B Answer-NLL label was computed, the label-free sampler
+resolved to the following concrete composition after excluding all legacy
+discovery24 and Gate 0A confirm24 prompt/source/context overlap:
+
+- RULER retrieval: 16 prompts, with task/template families split-disjoint
+  - discovery: niah_single_1, niah_single_2, niah_single_3, niah_multikey_1
+  - calibration: niah_multikey_2, niah_multikey_3
+  - heldout: niah_multivalue, niah_multiquery
+  - two fresh prompts per RULER task
+- LongBench single-document QA: 8 Qasper + 8 MultiFieldQA-en
+  - per split: discovery 4+4, calibration 2+2, heldout 2+2
+  - NarrativeQA had insufficient fresh in-window support after exclusions
+- LongBench multi-document QA: 8 HotpotQA + 8 2WikiMQA
+  - per split: discovery 4+4, calibration 2+2, heldout 2+2
+  - MuSiQue had insufficient fresh in-window support after exclusions
+
+Overall:
+
+- 48 prompts total
+- 16 prompts per broad family
+- 24 discovery / 12 calibration / 12 heldout
+- each broad family contributes 8 / 4 / 4 to those splits
+
+This realized composition is frozen before Gate 0B model execution. It narrows
+the LongBench task diversity relative to the formal 96 x 24 plan, so a
+half-scale positive result authorizes expansion only; it is not evidence of
+task-wide generalization.
