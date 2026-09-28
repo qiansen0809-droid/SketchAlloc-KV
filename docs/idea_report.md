@@ -2,9 +2,9 @@
 
 > 生成时间：2026-09-28
 >
-> 状态：`PENDING_PART2_REVIEW`
+> 状态：`GATE0_IN_PROGRESS`（Idea 方案已确认，实验假设尚待验证）
 >
-> 研究阶段：ResearchPilot B（Idea 深化）；当前只给出 Part 1 与 Part 2。用户确认后才进入正式阶段 C。
+> 研究阶段：Part 1 与 Part 2 已形成；用户已同意启动 Gate 0。正式阶段 C 的 baseline 精读与 Part 3 实验设计尚未完成。
 >
 > 一句话概括：**LU-KV 给出平均情况下的预算先验；SketchAlloc-KV 不再尝试从 prompt 文本一次性猜完整预算，而是主动测量少数最有辨识力的预算动作，识别当前 prompt 的潜在效用类型，再重建全部动作的边际收益。**
 
@@ -217,15 +217,8 @@ Gate 0 只做单步动作。只有单步选择有效，正式方法才考虑连�
 
 仅有“效用矩阵低秩”或一个 SVD 图，不足以投 CCF-C。若能完成“新现象 + 主动探针算法 + 严格 held-out 改善 + 真实物理系统开销”这四段闭环，且在至少两个模型、三个任务族、8K/16K/32K 和两档压缩率上超过 LU-KV、KVSculpt-style pilot、DynamicKV/EntroKV 与 MetaKV-style predictor，则有形成 CCF-C 独立论文的合理可能；若还能证明稀疏探针相对全组件 pilot 的数量级成本优势，具备进一步冲击更高档 venue 的空间。
 
-### 12. 阶段 B 确认卡
+### 12. 当前确认与未完成事项
 
-请用户确认以下内容后再进入阶段 C：
+用户已确认以 SketchAlloc-KV 为暂名建立项目并启动 Gate 0。当前执行顺序是先排除“一个固定动作已经足够”的解释，再检验效用残差结构，最后检验少量无答案探针能否预测有利动作。任何环节失败均须重新评估论文方向。
 
-- [ ] 接受暂名 SketchAlloc-KV；名称可在 Gate 0 后修改。
-- [ ] 接受“先证明 best-fixed 不能解释旧 headroom”，而不是直接把 79.17% 当作动态性证据。
-- [ ] 接受动作字典固定为 24–32 个预算守恒 swap。
-- [ ] 接受主方法为“低维效用面 + 主动哨兵干预”，不再优化 FullKV 行为相似度。
-- [ ] 接受 Gate 0 失败即停题，不用更大预测器挽救。
-- [ ] 接受 gold answer 只用于离线标签和验证，在线方法不读取答案。
-
-用户确认前，`docs/gate0_sketchalloc_kv.md` 只作为预注册草案，不等同于正式 Part 3。
+2026-09-28 导入的 CausalDuel 遗产仅包含 LU marginal profile 和 SQuALITY calibration 输入，不含旧 24 个 prompt 的逐动作 Answer-NLL 结果，因此尚无 Gate 0A 的真实统计结论，更无 SketchAlloc-KV 的有效性结论。`docs/gate0_sketchalloc_kv.md` 是 Gate 0 预注册草案，不等同于正式 Part 3。

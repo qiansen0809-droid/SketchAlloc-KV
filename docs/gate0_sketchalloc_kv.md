@@ -6,7 +6,9 @@
 >
 > 对应 Idea：`docs/idea_report.md`
 >
-> 目标：先用 CausalDuel-KV 遗产回答“是否值得做”，再决定是否投入新 scorer、物理 cache 和大规模实验。
+> 目标：利用可复用的旧资产准备实验，依次检验动态分配必要性、效用结构和少量探针的可识别性，再决定是否投入完整实现。
+
+> 当前数据状态：已导入 LU marginal profile 和 SQuALITY calibration 输入；旧 24 个 prompt 的逐动作结果尚未取得，Gate 0A 尚无 Go/No-Go 结论。参见 `docs/gate0a_import_audit_2026-09-28.md`。
 
 ## 0. 总判定逻辑
 
