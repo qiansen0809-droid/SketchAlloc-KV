@@ -1,8 +1,11 @@
 import json
 
 import numpy as np
+import torch
 
 from evaluation.sketchalloc.build_candidates import SwapCandidate, Unit
+from kvpress import LUPress, SnapKVPress
+
 from evaluation.sketchalloc.run_gate0a_replication import (
     curve_budget_from_array,
     load_actions,
@@ -110,3 +113,31 @@ def test_balanced_sampler_allows_one_exhausted_task():
         "qasper": 4,
         "multifieldqa_en": 4,
     }
+
+
+def test_curve_budget_helper_matches_lupress_runtime(tmp_path):
+    rng = np.random.default_rng(123)
+    curve = rng.uniform(0.65, 0.95, size=(99, 3, 8)).astype(np.float32)
+    path = tmp_path / "curve.npy"
+    np.save(path, curve)
+
+    press = LUPress(
+        press=SnapKVPress(compression_ratio=0.80),
+        budget_curve_path=str(path),
+        sink=4,
+        window=32,
+    )
+    press._post_setup_init()
+
+    for seq_len in [7416, 7849, 7990, 8016, 8192, 8391, 9150]:
+        helper = curve_budget_from_array(curve, 0.80, seq_len)
+        runtime = []
+        for layer_idx in range(3):
+            counts = press.get_keep_counts(
+                layer_idx=layer_idx,
+                num_heads=8,
+                seq_len=seq_len,
+                device=torch.device("cpu"),
+            )
+            runtime.append([int(x) for x in counts.tolist()])
+        assert helper == runtime
