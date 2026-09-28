@@ -159,7 +159,7 @@ def code_sim_score(prediction, ground_truth, **kwargs):
     all_lines = prediction.lstrip("\n").split("\n")
     prediction = ""
     for line in all_lines:
-        if ("\`" not in line) and ("#" not in line) and ("//" not in line):
+        if ("`" not in line) and ("#" not in line) and ("//" not in line):
             prediction = line
             break
     return fuzz.ratio(prediction, ground_truth) / 100
