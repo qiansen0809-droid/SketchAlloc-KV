@@ -10,13 +10,13 @@ from rouge import Rouge
 
 try:
     import jieba
+except ImportError:
+    jieba = None
+
+try:
     from fuzzywuzzy import fuzz
-except ImportError as e:
-    missing_module = str(e).split()[-1].strip("'")  # Extract missing module name
-    print(
-        f"Module '{missing_module}' not found. \
-          If test Longbench, please install it using 'pip install {missing_module}'"
-    )
+except ImportError:
+    fuzz = None
 
 
 # def calculate_metrics(df):
@@ -151,10 +151,15 @@ def retrieval_zh_score(prediction, ground_truth, **kwargs):
 
 
 def code_sim_score(prediction, ground_truth, **kwargs):
+    if fuzz is None:
+        raise ImportError(
+            "LongBench code metrics require fuzzywuzzy. Install evaluation extras with "
+            "'python -m pip install -e ".[eval]"'."
+        )
     all_lines = prediction.lstrip("\n").split("\n")
     prediction = ""
     for line in all_lines:
-        if ("`" not in line) and ("#" not in line) and ("//" not in line):
+        if ("\`" not in line) and ("#" not in line) and ("//" not in line):
             prediction = line
             break
     return fuzz.ratio(prediction, ground_truth) / 100
@@ -187,6 +192,11 @@ def rouge_score(prediction, ground_truth, **kwargs):
 
 
 def rouge_zh_score(prediction, ground_truth, **kwargs):
+    if jieba is None:
+        raise ImportError(
+            "LongBench Chinese metrics require jieba. Install evaluation extras with "
+            "'python -m pip install -e ".[eval]"'."
+        )
     prediction = " ".join(list(jieba.cut(prediction, cut_all=False)))
     ground_truth = " ".join(list(jieba.cut(ground_truth, cut_all=False)))
     score = rouge_score(prediction, ground_truth)
@@ -214,6 +224,11 @@ def qa_f1_score(prediction, ground_truth, **kwargs):
 
 
 def qa_f1_zh_score(prediction, ground_truth, **kwargs):
+    if jieba is None:
+        raise ImportError(
+            "LongBench Chinese metrics require jieba. Install evaluation extras with "
+            "'python -m pip install -e ".[eval]"'."
+        )
     prediction_tokens = list(jieba.cut(prediction, cut_all=False))
     ground_truth_tokens = list(jieba.cut(ground_truth, cut_all=False))
     prediction_tokens = [normalize_zh_answer(token) for token in prediction_tokens]
