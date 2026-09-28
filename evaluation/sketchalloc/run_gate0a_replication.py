@@ -80,26 +80,44 @@ def load_actions(path: Path) -> tuple[list[SwapCandidate], dict]:
 
 
 def curve_budget_from_array(curve: np.ndarray, compression_ratio: float, seq_len: int) -> list[list[int]]:
+    """Mirror LUPress._curve_keep_counts exactly on CPU.
+
+    This helper is used only for pre-label legality/runtime audits, so it must
+    match the torch float32 rounding and torch.topk tie behavior used by the
+    actual LUPress implementation.
+    """
     target_idx = int(round(compression_ratio * 100)) - 1
     target_idx = max(0, min(98, target_idx))
-    # Match LUPress._curve_keep_counts arithmetic as closely as possible:
-    # the runtime converts the profile slice to float32 before computing
-    # ideal per-head keep counts.
-    slice_ = np.asarray(curve[target_idx], dtype=np.float32)
-    budgets: list[list[int]] = []
-    for local_prune_ratios in slice_:
-        ideal = (1.0 - local_prune_ratios) * seq_len
-        total_target = int(np.rint(ideal.sum()))
-        keep = np.floor(ideal).astype(np.int64)
-        remainder = total_target - int(keep.sum())
-        if remainder > 0:
-            fractional = ideal - keep
-            order = np.argsort(-fractional, kind="stable")
-            keep[order[: min(remainder, keep.size)]] += 1
-        keep = np.clip(keep, 1, seq_len)
-        budgets.append([int(x) for x in keep.tolist()])
-    return budgets
+    slice_ = np.asarray(curve[target_idx])
 
+    budgets: list[list[int]] = []
+    for local_prune_ratios_np in slice_:
+        local_prune_ratios = torch.as_tensor(
+            local_prune_ratios_np,
+            device=torch.device("cpu"),
+            dtype=torch.float32,
+        )
+        head_keep_rates = 1.0 - local_prune_ratios
+        ideal_keep_counts = head_keep_rates * seq_len
+
+        total_keep_target = int(torch.round(ideal_keep_counts.sum()).item())
+        keep_counts = torch.floor(ideal_keep_counts).long()
+        remainder = total_keep_target - int(keep_counts.sum().item())
+
+        if remainder > 0:
+            fractional_parts = ideal_keep_counts - keep_counts
+            num_to_distribute = min(remainder, int(keep_counts.numel()))
+            if num_to_distribute > 0:
+                top_k_indices = torch.topk(
+                    fractional_parts,
+                    k=num_to_distribute,
+                ).indices
+                keep_counts[top_k_indices] += 1
+
+        keep_counts = keep_counts.clamp(min=1, max=seq_len)
+        budgets.append([int(x) for x in keep_counts.tolist()])
+
+    return budgets
 
 def validate_all_legality(rows: list[dict], actions: list[SwapCandidate], curve_path: str, compression_ratio: float) -> None:
     curve = np.load(curve_path)
