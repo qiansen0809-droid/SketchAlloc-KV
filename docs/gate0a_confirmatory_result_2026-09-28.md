@@ -64,10 +64,16 @@ L27H7->L25H0@16            2
 - pairwise crossover rate >= 0.30: **PASS** (1.00)
 - no single oracle action dominates; high normalized entropy: **supporting evidence**
 - leave-one-family-out fixed policy has approximately zero aggregate gain: **supporting evidence**
+- drop-one-family direction remains positive for every omitted family: **PASS**
+  - drop LongBench multi: oracle - LOPO best-fixed = 0.0189563893
+  - drop LongBench single: oracle - LOPO best-fixed = 0.0177398138
+  - drop RULER retrieval: oracle - LOPO best-fixed = 0.0179192573
 
 The confirmatory result reproduces the qualitative discovery pattern: a prompt-local
 oracle has positive headroom, while leakage-aware fixed choices do not explain it and
-action rankings cross over strongly across prompts.
+action rankings cross over strongly across prompts. The direction is unchanged after
+dropping any one of the three broad task families, completing the preregistered Gate 0A
+sensitivity check.
 
 ## Interpretation boundary
 
