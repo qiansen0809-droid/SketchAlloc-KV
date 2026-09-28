@@ -105,3 +105,21 @@ The primary confirmatory statistics remain:
 
 Do not start Gate 0B until this independent fixed-action replication is
 complete.
+
+
+## Confirmatory sampling amendment frozen before replication labels
+
+The fresh confirmatory sampler preserves the 6144-9216 LongBench context-token
+window and excludes all legacy prompt IDs, source rows, and context hashes.
+
+After applying those exclusions, NarrativeQA has zero fresh distinct contexts
+inside the frozen token window. The confirmatory single-document family is
+therefore sampled as 4 Qasper + 4 MultiFieldQA-en rather than widening the
+window or reusing legacy contexts. The multi-document family remains balanced
+at 3 HotpotQA + 3 2WikiMQA + 2 MuSiQue. RULER retains one prompt from each of
+the eight retrieval subtasks.
+
+This amendment is based only on fresh-sample availability and token length. It
+was frozen before running the confirmatory model or observing any confirmatory
+Answer-NLL labels. The confirmatory claim must therefore be phrased at the
+three-family level; it does not establish a NarrativeQA-specific replication.
