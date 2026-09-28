@@ -37,7 +37,7 @@ complete rectangular matrix.
 
 Research scaffold for **sparse active identification of prompt-conditioned KV-cache allocation utility**.
 
-Status: Gate 0 design and legacy migration. No SOTA or physical-memory claim is made yet.
+Status: Gate 0A confirmatory GO; Gate 0B structural testing is next. No SOTA or physical-memory claim is made yet.
 
 ## Core question
 
@@ -86,9 +86,9 @@ This command is only a structural upper bound: it assumes the true utility of th
 
 ## Current limitations
 
-- The imported legacy backup contains an LU marginal profile and SQuALITY
-  calibration data, but no per-prompt intervention outcomes. Gate 0A has not
-  produced a Go/No-Go result.
+- Gate 0A passed on a fresh 24-prompt, 5-fixed-action confirmatory matrix; this
+  establishes prompt-dependent local action utility in the tested setting, not
+  the effectiveness of SketchAlloc itself.
 - The inherited LU path uses logical masking; physical KV-page savings remain a separate Gate -1.
 - The active local probe extractor is not implemented until the structural gates pass.
 
