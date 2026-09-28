@@ -82,7 +82,10 @@ def load_actions(path: Path) -> tuple[list[SwapCandidate], dict]:
 def curve_budget_from_array(curve: np.ndarray, compression_ratio: float, seq_len: int) -> list[list[int]]:
     target_idx = int(round(compression_ratio * 100)) - 1
     target_idx = max(0, min(98, target_idx))
-    slice_ = np.asarray(curve[target_idx], dtype=np.float64)
+    # Match LUPress._curve_keep_counts arithmetic as closely as possible:
+    # the runtime converts the profile slice to float32 before computing
+    # ideal per-head keep counts.
+    slice_ = np.asarray(curve[target_idx], dtype=np.float32)
     budgets: list[list[int]] = []
     for local_prune_ratios in slice_:
         ideal = (1.0 - local_prune_ratios) * seq_len
@@ -214,6 +217,7 @@ def main() -> None:
 
     model, tokenizer = load_model(args.model, args.dtype)
     press = make_press(args.budget_curve_path, args.compression_ratio)
+    runtime_audit_curve = np.load(args.budget_curve_path)
 
     for prompt_idx, row in enumerate(rows):
         out_path = args.output_dir / f"{row['id']}.json"
@@ -248,6 +252,16 @@ def main() -> None:
         # stale per-head keep counts from a different sequence length.
         press.clear_keep_counts_override()
         baseline = curve_budget(press, model, context_len)
+        expected_baseline = curve_budget_from_array(
+            runtime_audit_curve,
+            args.compression_ratio,
+            context_len,
+        )
+        if baseline != expected_baseline:
+            raise RuntimeError(
+                f"{row['id']}: runtime LU baseline differs from the frozen "
+                "curve-derived baseline. Refusing to compute confirmatory labels."
+            )
         min_keep = min(context_len, press.sink + press.window)
 
         lu_nll, lu_all = score_condition(
