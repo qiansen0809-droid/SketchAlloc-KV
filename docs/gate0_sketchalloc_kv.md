@@ -8,7 +8,7 @@
 >
 > 目标：利用可复用的旧资产准备实验，依次检验动态分配必要性、效用结构和少量探针的可识别性，再决定是否投入完整实现。
 
-> 当前数据状态：已导入 LU marginal profile 和 SQuALITY calibration 输入；旧 24 个 prompt 的逐动作结果尚未取得，Gate 0A 尚无 Go/No-Go 结论。参见 `docs/gate0a_import_audit_2026-09-28.md`。
+> 当前状态：**Gate 0A 已正式 GO，进入 Gate 0B。** 独立 confirmatory 24×5 固定动作矩阵满足预注册的 oracle-vs-best-fixed、family-static、cross-over 与 drop-one-family 方向稳定性条件。详见 `docs/gate0a_confirmatory_result_2026-09-28.md`。
 
 ## 0. 总判定逻辑
 
