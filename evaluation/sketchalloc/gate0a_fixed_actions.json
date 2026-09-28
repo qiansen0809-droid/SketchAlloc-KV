@@ -1,0 +1,53 @@
+{
+  "name": "gate0a_common5_replication_v1",
+  "status": "frozen_before_new_replication_labels",
+  "date": "2026-09-28",
+  "model": "Meta-Llama-3.1-8B-Instruct",
+  "compression_ratio": 0.8,
+  "retention_ratio": 0.2,
+  "swap_size": 16,
+  "lu_fallback_allowed": true,
+  "actions": [
+    {
+      "action_id": "L0H6->L25H0@16",
+      "donor_layer": 0,
+      "donor_head": 6,
+      "receiver_layer": 25,
+      "receiver_head": 0,
+      "amount": 16
+    },
+    {
+      "action_id": "L17H6->L16H6@16",
+      "donor_layer": 17,
+      "donor_head": 6,
+      "receiver_layer": 16,
+      "receiver_head": 6,
+      "amount": 16
+    },
+    {
+      "action_id": "L18H5->L24H0@16",
+      "donor_layer": 18,
+      "donor_head": 5,
+      "receiver_layer": 24,
+      "receiver_head": 0,
+      "amount": 16
+    },
+    {
+      "action_id": "L22H2->L5H2@16",
+      "donor_layer": 22,
+      "donor_head": 2,
+      "receiver_layer": 5,
+      "receiver_head": 2,
+      "amount": 16
+    },
+    {
+      "action_id": "L27H7->L25H0@16",
+      "donor_layer": 27,
+      "donor_head": 7,
+      "receiver_layer": 25,
+      "receiver_head": 0,
+      "amount": 16
+    }
+  ],
+  "note": "These are the five actions observed for all 24 legacy prompts. Freeze this set for the first independent replication. Do not add or remove actions after viewing new replication Answer-NLL labels."
+}
