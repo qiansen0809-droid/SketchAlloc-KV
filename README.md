@@ -2,6 +2,20 @@
 
 ## Gate 0A quick start
 
+For the current execution branch, the preferred entry point is:
+
+```bash
+python -m evaluation.sketchalloc.run_gate0a \
+  --raw-dir results/legacy_causalduel/gate0/answer_onset/discovery24 \
+  --output-dir results/sketchalloc/gate0a \
+  --bootstrap 5000
+```
+
+This performs legacy normalization, action-coverage audit, and Gate 0A analysis
+in one command. It does not require a GPU. If the old prompt-by-action matrix is
+incomplete, the summary records that status and no cross-prompt adaptive claim
+should be made.
+
 The first gate audits whether the legacy CausalDuel interventions form a
 shared prompt-by-action matrix and whether prompt-local oracle actions really
 beat a leakage-free fixed action.
