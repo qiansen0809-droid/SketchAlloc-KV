@@ -87,6 +87,7 @@ def normalize_payload(payload: dict, source_file: str = "") -> list[dict]:
                 "context_cluster": str(payload.get("context_sha256") or prompt_id),
                 "family": str(payload.get("family", "unknown")),
                 "task": str(payload.get("task", "unknown")),
+                "split": str(payload.get("split", "unknown")),
                 "action_id": stable_action_id(candidate),
                 "legacy_candidate_name": str(candidate.get("name", "")),
                 "category": str(candidate.get("category", "unknown")),
