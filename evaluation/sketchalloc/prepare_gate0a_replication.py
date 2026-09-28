@@ -99,6 +99,98 @@ def eligible_sorted(records: list[dict], target: int, low: int, high: int, exclu
     return deduped
 
 
+def _select_balanced_from_pools(
+    pools: dict[str, list[dict]],
+    tasks: list[str],
+    target: int,
+    total_size: int,
+    min_rows_to_represent_task: int = LONG_BENCH_MIN_PER_TASK,
+) -> tuple[list[dict], dict]:
+    """Select a label-free, approximately balanced family sample.
+
+    A task is represented only when enough fresh, in-window, distinct contexts
+    remain after legacy exclusions. This avoids widening the token window or
+    reusing old contexts merely to preserve a task quota that the fresh support
+    cannot satisfy.
+    """
+
+    pool_sizes = {task: len(pools[task]) for task in tasks}
+    eligible_tasks = [
+        task for task in tasks
+        if len(pools[task]) >= min_rows_to_represent_task
+    ]
+    excluded_tasks = {
+        task: len(pools[task])
+        for task in tasks
+        if task not in eligible_tasks
+    }
+
+    if len(eligible_tasks) < 2:
+        raise RuntimeError(
+            "fresh LongBench support is too narrow after exclusions: "
+            f"pool_sizes={pool_sizes}; need at least two tasks with "
+            f">={min_rows_to_represent_task} fresh contexts each"
+        )
+
+    selected: list[dict] = []
+    seen_contexts: set[str] = set()
+    per_task_selected = {task: 0 for task in eligible_tasks}
+    cursors = {task: 0 for task in eligible_tasks}
+
+    while len(selected) < total_size:
+        candidates: list[tuple[int, int, str, int, dict]] = []
+        for task in eligible_tasks:
+            cursor = cursors[task]
+            while cursor < len(pools[task]) and pools[task][cursor]["context_sha256"] in seen_contexts:
+                cursor += 1
+            cursors[task] = cursor
+            if cursor >= len(pools[task]):
+                continue
+
+            row = pools[task][cursor]
+            candidates.append(
+                (
+                    per_task_selected[task],
+                    abs(int(row["context_tokens"]) - target),
+                    task,
+                    int(row["source_index"]),
+                    row,
+                )
+            )
+
+        if not candidates:
+            break
+
+        _, _, task, _, row = min(candidates, key=lambda item: item[:4])
+        selected.append(row)
+        seen_contexts.add(row["context_sha256"])
+        per_task_selected[task] += 1
+        cursors[task] += 1
+
+    if len(selected) < total_size:
+        raise RuntimeError(
+            f"only {len(selected)} fresh globally distinct LongBench contexts "
+            f"available across eligible tasks {eligible_tasks}; need {total_size}"
+        )
+
+    diagnostics = {
+        "pool_sizes_after_exclusion": pool_sizes,
+        "eligible_tasks": eligible_tasks,
+        "excluded_tasks_insufficient_fresh_support": excluded_tasks,
+        "min_rows_to_represent_task": min_rows_to_represent_task,
+        "selected_task_counts": per_task_selected,
+        "selection_rule": (
+            "keep the original 6144-9216 token window; exclude all legacy "
+            "prompt/source/context overlaps; drop only tasks with fewer than "
+            "two fresh in-window distinct contexts; fill the 8-prompt family "
+            "approximately evenly across remaining tasks, breaking ties by "
+            "distance to the 8192-token target and source index; no model "
+            "outputs or answer quality are used"
+        ),
+    }
+    return selected, diagnostics
+
+
 def load_longbench_group(tokenizer, tasks, family, revision, target, low, high, exclusions):
     pools: dict[str, list[dict]] = {}
     for task in tasks:
@@ -117,51 +209,13 @@ def load_longbench_group(tokenizer, tasks, family, revision, target, low, high, 
             for i, row in enumerate(ds)
         ]
         pools[task] = eligible_sorted(records, target, low, high, exclusions)
-        if len(pools[task]) < LONG_BENCH_MIN_PER_TASK:
-            raise RuntimeError(
-                f"{family}/{task}: only {len(pools[task])} fresh distinct contexts remain; "
-                f"need at least {LONG_BENCH_MIN_PER_TASK}"
-            )
 
-    selected: list[dict] = []
-    seen_contexts: set[str] = set()
-    for task in tasks:
-        taken = 0
-        for row in pools[task]:
-            if row["context_sha256"] in seen_contexts:
-                continue
-            selected.append(row)
-            seen_contexts.add(row["context_sha256"])
-            taken += 1
-            if taken == LONG_BENCH_MIN_PER_TASK:
-                break
-        if taken < LONG_BENCH_MIN_PER_TASK:
-            raise RuntimeError(f"{family}/{task}: insufficient globally distinct fresh contexts")
-
-    remaining: list[dict] = []
-    for task in tasks:
-        for row in pools[task]:
-            if row["context_sha256"] not in seen_contexts:
-                remaining.append(row)
-    remaining.sort(
-        key=lambda row: (
-            abs(row["context_tokens"] - target),
-            row["task"],
-            row["source_index"],
-        )
+    return _select_balanced_from_pools(
+        pools,
+        list(tasks),
+        target=target,
+        total_size=LONG_BENCH_FAMILY_SIZE,
     )
-    for row in remaining:
-        if len(selected) >= LONG_BENCH_FAMILY_SIZE:
-            break
-        if row["context_sha256"] in seen_contexts:
-            continue
-        selected.append(row)
-        seen_contexts.add(row["context_sha256"])
-
-    if len(selected) < LONG_BENCH_FAMILY_SIZE:
-        raise RuntimeError(f"{family}: only {len(selected)} fresh prompts available")
-    return selected[:LONG_BENCH_FAMILY_SIZE]
-
 
 def load_ruler(tokenizer, revision, target, exclusions, local_parquet=None):
     if local_parquet is not None:
@@ -214,7 +268,7 @@ def main() -> None:
         exclusions,
         args.ruler_local_parquet,
     )
-    single = load_longbench_group(
+    single, single_diag = load_longbench_group(
         tokenizer,
         SINGLE_DOC_TASKS,
         "longbench_single",
@@ -224,7 +278,7 @@ def main() -> None:
         args.max_context_tokens,
         exclusions,
     )
-    multi = load_longbench_group(
+    multi, multi_diag = load_longbench_group(
         tokenizer,
         MULTI_DOC_TASKS,
         "longbench_multi",
@@ -263,6 +317,14 @@ def main() -> None:
         "family_counts": family_counts,
         "target_context_tokens": args.target_context_tokens,
         "longbench_context_token_window": [args.min_context_tokens, args.max_context_tokens],
+        "sampling_deviation_note": (
+            "The original MiniGate reserved two prompts from every LongBench task. "
+            "For confirmatory replication, legacy prompt/source/context overlap is forbidden. "
+            "If a task has fewer than two fresh in-window distinct contexts after exclusion, "
+            "that task is omitted rather than widening the token window or reusing old data."
+        ),
+        "longbench_single_selection": single_diag,
+        "longbench_multi_selection": multi_diag,
         "samples": [
             {
                 key: row[key]
