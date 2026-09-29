@@ -50,6 +50,29 @@ The former probability-overlap / KL / answer-onset selector is not part of the n
 - `docs/collision_check_2026-09-28.md`: novelty collision check.
 - `docs/legacy_reuse_manifest.md`: exact keep/archive/rewrite decisions.
 
+## LU-KV generalization stress test
+
+Before investing in the active SketchAlloc selector, the repository now includes a preregistered LU-KV transfer stress test over three axes:
+
+- domain / task-family shift on LongBench;
+- context-length shift on RULER (8K / 16K / 32K, plus 64K in full mode);
+- compression shift (50% / 80% / 90%).
+
+Generate the screening matrix without running the model:
+
+```bash
+python -m evaluation.sketchalloc.generalization_matrix \
+  --model /path/to/Meta-Llama-3.1-8B-Instruct \
+  --profile source=/path/to/lu_curve.npy \
+  --longbench-path /path/to/longbench \
+  --ruler-path /path/to/ruler \
+  --dimension all \
+  --mode screening \
+  --device cuda:0
+```
+
+Add `--execute` only after checking dataset/profile paths and the planned run count. See `docs/generalization_stress_test.md` for the scientific controls and source-vs-target profile regret definition.
+
 ## First executable check
 
 Normalize the legacy prompt-action results into a CSV with columns:
@@ -81,5 +104,5 @@ This command is only a structural upper bound: it assumes the true utility of th
 ## Tests
 
 ```bash
-pytest tests/test_sketchalloc_rank.py tests/test_gate0_candidates.py tests/test_gate0_marginals.py tests/test_gate0_metrics.py
+pytest tests/test_sketchalloc_rank.py tests/test_generalization_matrix.py tests/test_gate0_candidates.py tests/test_gate0_marginals.py tests/test_gate0_metrics.py
 ```

@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+
 from benchmarks.infinite_bench.calculate_metrics import calculate_metrics as infinite_bench_scorer
 from benchmarks.longbench.calculate_metrics import calculate_metrics as longbench_scorer
 from benchmarks.longbench.calculate_metrics import calculate_metrics_e as longbench_scorer_e
@@ -36,17 +38,15 @@ from kvpress import (
 )
 
 
-# These dictionaries define the available datasets, scorers, and KVPress methods for evaluation.
+# Local paths in the original LU-KV environment can be overridden without
+# editing source. This keeps AutoDL/generalization runs reproducible while
+# preserving the upstream defaults.
 DATASET_REGISTRY = {
     "loogle": "simonjegou/loogle",
-    # "ruler": "simonjegou/ruler",
-    "ruler": "/ssd1/tangziyao/datasets/ruler",
+    "ruler": os.environ.get("SKETCHALLOC_RULER_PATH", "/ssd1/tangziyao/datasets/ruler"),
     "zero_scrolls": "simonjegou/zero_scrolls",
-    # "infinitebench": "MaxJeblick/InfiniteBench",
-    # "infinitebench": "/ssd2/tangziyao/tzy/datasets/InfiniteBench",
-    "infinitebench": "/ssd2/tangziyao/tzy/datasets/myinf",
-    # "longbench": "Xnhyacinth/LongBench",
-    "longbench": "/ssd1/tangziyao/datasets/longbench",
+    "infinitebench": os.environ.get("SKETCHALLOC_INFINITEBENCH_PATH", "/ssd2/tangziyao/tzy/datasets/myinf"),
+    "longbench": os.environ.get("SKETCHALLOC_LONGBENCH_PATH", "/ssd1/tangziyao/datasets/longbench"),
     "longbench-e": "Xnhyacinth/LongBench",
 }
 
@@ -89,12 +89,12 @@ PRESS_REGISTRY = {
     "think": ThinKPress(),
     "tova": TOVAPress(),
     "no_press": None,
-    "pyramidkv_snapkv":PyramidKVWrap(SnapKVPress()),
-    "pyramidkv_keydiff":PyramidKVWrap(KeyDiffPress()),
-    "pyramidkv_ea":PyramidKVWrap(ExpectedAttentionPress()),
-    "pyramidkv_ea_e2":PyramidKVWrap(ExpectedAttentionPress(epsilon=2e-2)),
-    "adakv_keydiff":AdaKVPress(KeyDiffPress()),
-    "lu_snapkv": LUPress(press=SnapKVPress(),sink=4, window=32),
-    "lu_keydiff": LUPress(press=KeyDiffPress(),sink=4, window=1),
-    "lu_ea": LUPress(press=ExpectedAttentionPress(epsilon=2e-2),sink=4, window=1),
+    "pyramidkv_snapkv": PyramidKVWrap(SnapKVPress()),
+    "pyramidkv_keydiff": PyramidKVWrap(KeyDiffPress()),
+    "pyramidkv_ea": PyramidKVWrap(ExpectedAttentionPress()),
+    "pyramidkv_ea_e2": PyramidKVWrap(ExpectedAttentionPress(epsilon=2e-2)),
+    "adakv_keydiff": AdaKVPress(KeyDiffPress()),
+    "lu_snapkv": LUPress(press=SnapKVPress(), sink=4, window=32),
+    "lu_keydiff": LUPress(press=KeyDiffPress(), sink=4, window=1),
+    "lu_ea": LUPress(press=ExpectedAttentionPress(epsilon=2e-2), sink=4, window=1),
 }

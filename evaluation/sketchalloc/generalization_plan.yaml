@@ -1,0 +1,41 @@
+version: 1
+
+# This file documents the preregistered stress-test axes.
+# generalization_matrix.py has matching defaults; edit this file only when
+# changing the scientific protocol, not merely local paths.
+
+task_families:
+  single_doc_qa: [narrativeqa, qasper, multifieldqa_en]
+  multi_doc_qa: [hotpotqa, 2wikimqa, musique]
+  summarization: [gov_report, qmsum, multi_news]
+  few_shot: [trec, triviaqa, samsum]
+  synthetic: [passage_count, passage_retrieval_en]
+  code: [lcc, repobench-p]
+
+screening_representatives:
+  single_doc_qa: qasper
+  multi_doc_qa: hotpotqa
+  summarization: gov_report
+  few_shot: trec
+  synthetic: passage_retrieval_en
+  code: repobench-p
+
+dimensions:
+  domain:
+    compression_ratios: [0.8]
+  length:
+    ruler_context_lengths: [8192, 16384, 32768]
+    compression_ratios: [0.8, 0.9]
+  compression:
+    compression_ratios: [0.5, 0.8, 0.9]
+
+full_mode:
+  ruler_context_lengths: [8192, 16384, 32768, 65536]
+
+primary_press: lu_snapkv
+
+scientific_controls:
+  - keep model, scorer, sink/window, total budget and decoding protocol fixed within a comparison
+  - never build a target profile from target test examples
+  - report target-calibrated LU as a diagnostic upper comparator, not an equal-information baseline
+  - separate raw task degradation from source-vs-target profile regret
