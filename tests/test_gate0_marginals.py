@@ -19,3 +19,16 @@ def test_exact_runtime_keep_counts_clamps_to_valid_range():
     counts = exact_runtime_keep_counts(ratios, length=8)
 
     assert counts.tolist() == [1, 8]
+
+
+def test_exact_runtime_keep_counts_matches_torch_float32_boundary():
+    ratios = np.array([
+        0.7226096, 0.7133434, 0.8101599, 0.7055573,
+        0.77900493, 0.8791592, 0.7937769, 0.8993674,
+    ], dtype=np.float32)
+
+    counts = exact_runtime_keep_counts(ratios, length=2048)
+
+    # Float64 NumPy arithmetic gives one fewer entry to head 5 here. Runtime
+    # LUPress uses torch.float32 and keeps 248, so the offline helper must too.
+    assert counts.tolist() == [568, 587, 389, 603, 453, 248, 422, 206]
