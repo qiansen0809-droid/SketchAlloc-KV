@@ -31,7 +31,7 @@ class PairPaths:
 class PairData:
     pair_id: str
     prune_ratio: np.ndarray  # [layer, KV head], one target compression level
-    prefix_utility: np.ndarray  # [layer, KV head, retained middle tokens + 1]
+    prefix_utility: np.ndarray  # [layer, KV head, runtime-ranked tokens + 1]
     context_length: int
 
 
@@ -109,11 +109,23 @@ def load_pair(
     if curve is None:
         raise ValueError(f"{paths.pair_id}: LU-KV could not compute an allocation curve")
 
-    end = length - window if window else length
-    middle_oracle = oracle[..., sink:end]
-    middle_scorer = scorer[..., sink:end]
-    order = np.argsort(middle_scorer, axis=-1)[..., ::-1]
-    aligned_oracle = np.take_along_axis(middle_oracle, order, axis=-1)
+    # Replay the actual LUPress ranking over all positions. Sink/window are
+    # score boosts at runtime, not a hard per-head keep floor. When a static
+    # prune-ratio profile is transferred to another sequence length, its
+    # integer keep count may legitimately fall below sink+window.
+    runtime_scorer = scorer.copy()
+    safe_sink = min(sink, length)
+    window_start = max(0, length - window)
+    for layer in range(runtime_scorer.shape[0]):
+        layer_max = runtime_scorer[layer].max()
+        if safe_sink:
+            runtime_scorer[layer, :, :safe_sink] = layer_max
+        if window:
+            runtime_scorer[layer, :, window_start:] = layer_max
+
+    # Match torch.argsort(..., descending=True, stable=True) in LUPress.
+    order = np.argsort(-runtime_scorer, axis=-1, kind="stable")
+    aligned_oracle = np.take_along_axis(oracle, order, axis=-1)
     prefix_utility = np.concatenate(
         (
             np.zeros((*oracle.shape[:2], 1), dtype=np.float64),
@@ -122,7 +134,7 @@ def load_pair(
         axis=-1,
     )
     if prefix_utility[..., -1].sum() <= 0:
-        raise ValueError(f"{paths.pair_id}: all middle-token oracle utilities are zero")
+        raise ValueError(f"{paths.pair_id}: all-token oracle utilities are zero")
 
     return PairData(
         pair_id=paths.pair_id,
@@ -144,18 +156,15 @@ def evaluate_profile(
     """Return middle-token oracle loss after ranking tokens with the fixed scorer."""
     losses = []
     kept_counts = []
-    protected = sink + window
     for pair in heldout:
         counts = keep_counts(profile, pair.context_length)
-        middle_kept = counts - protected
-        max_middle = pair.prefix_utility.shape[-1] - 1
-        if np.any(middle_kept < 0) or np.any(middle_kept > max_middle):
+        max_keep = pair.prefix_utility.shape[-1] - 1
+        if np.any(counts < 1) or np.any(counts > max_keep):
             raise ValueError(
-                f"{pair.pair_id}: profile assigned fewer than {protected} protected "
-                "positions to a head; this proxy cannot evaluate that profile"
+                f"{pair.pair_id}: runtime keep count is outside [1, {max_keep}]"
             )
         kept = np.take_along_axis(
-            pair.prefix_utility, middle_kept[..., None], axis=-1
+            pair.prefix_utility, counts[..., None], axis=-1
         )[..., 0].sum()
         total = pair.prefix_utility[..., -1].sum()
         losses.append(float(1.0 - kept / total))
