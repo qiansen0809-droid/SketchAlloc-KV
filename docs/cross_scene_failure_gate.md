@@ -34,6 +34,12 @@ LU-KV 附录 F.2 仅比较两种偏阅读理解的离线标定文本在各任务
 
 数据来自 LongBench 官方 test split，内部按 context 划分仅适合探索，不是可投稿的独立最终测试集；正式论文必须另留未参与假设选择的外部测试。[LongBench 官方仓库](https://github.com/THUDM/LongBench)。
 
+### 2026-10-02 实现校正：跨长度画像的 sink/window 语义
+
+首轮长度匹配 smoke 暴露了一个分析器实现问题：官方/迁移 LU 静态画像在换到不同 context length 后，某些 head 的整数 keep count 可以小于 `sink + window`。LUPress 的真实运行语义并不把这 36 个位置当作硬预算下限，而是把 sink 与 recent window 的 scorer 提升到该层最大值后，仍按该 head 的实际 keep count 排序保留。因此旧分析器“keep count < sink+window 就拒绝”的逻辑与真实运行时不一致。
+
+修正后的 proxy 在全部 context positions 上重放 LUPress 的 score boost 与 stable descending ranking，再按真实整数 keep count 取前缀；固定官方预算下的 oracle-token headroom 也改为在全部 token 上做事后 top-k 上界。同时，离线 keep-count 换算改为复现 LUPress 的 torch.float32、torch.round 与 torch.topk 语义，避免边界处出现 1 个 KV entry 的舍入差。该校正不改变 Gate 假设、样本划分、压缩率或 scorer，只修复迁移画像在不同长度下的可评估性与运行时一致性。
+
 ## 服务器执行（Llama-3.1-8B，48 GB）
 
 使用新目录，避免仓库旧的 step-1 采集脚本覆盖同名 `context_*` 输出。以下 4 个场景 × 每场景 4 个 context 是最小 smoke test（2 标定 + 2 留出），**不可据此宣布统计显著**；若出现信号，再将 `--per-task` 提至 10 以上并增加独立测试。
