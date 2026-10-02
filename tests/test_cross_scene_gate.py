@@ -4,6 +4,7 @@ import json
 import numpy as np
 import pytest
 
+from evaluation.active_calibration.gate0 import PairData, evaluate_profile
 from evaluation.cross_scene.analyze import analyze, load_manifest
 from evaluation.cross_scene.prepare import format_row, prepare
 
@@ -95,3 +96,24 @@ def test_cross_scene_analyze_uses_context_heldout_only(tmp_path):
         result["matrix"]["repobench-p"]["task_lcc"]["mean_proxy_loss"]
     )
     assert (args.output_dir / "transfer_results.json").is_file()
+
+
+def test_transferred_profile_can_keep_less_than_sink_plus_window():
+    length = 80
+    prefix = np.broadcast_to(
+        np.arange(length + 1, dtype=np.float64), (1, 2, length + 1)
+    ).copy()
+    pair = PairData(
+        pair_id="transferred",
+        prune_ratio=np.full((1, 2), 0.5, dtype=np.float64),
+        prefix_utility=prefix,
+        context_length=length,
+    )
+    profile = np.full((1, 2), 0.80, dtype=np.float64)
+
+    result = evaluate_profile(profile, [pair], sink=4, window=32)
+
+    # 80% pruning keeps 16 positions/head, below sink+window=36. Runtime
+    # LUPress allows this because sink/window are scorer boosts, not a floor.
+    assert result["mean_kept_entries"] == 32.0
+    assert result["mean_proxy_loss"] == pytest.approx(0.8)
