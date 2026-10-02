@@ -22,7 +22,7 @@ def test_proxy_loss_respects_head_budget():
     pair = PairData(
         pair_id="toy",
         prune_ratio=np.zeros((1, 2)),
-        prefix_utility=np.array([[[0, 5, 9, 12, 14], [0, 1, 2, 3, 4]]]),
+        prefix_utility=np.array([[[0, 5, 9, 12, 14, 15, 16], [0, 1, 2, 3, 4, 5, 6]]]),
         context_length=6,
     )
     favor_valuable_head = np.array([[1 / 3, 2 / 3]])
