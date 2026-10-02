@@ -81,6 +81,7 @@ class SampleData:
     questions: List[str]
     sample_id: str = "0"
     task: str = "default"
+    answer_prefix: str = ""
 
 # ================= Core Recorder =================
 class Recorder:
@@ -322,7 +323,13 @@ def read_data(path, default_task):
             try:
                 obj = json.loads(line)
                 qs = obj.get('questions', []) or ([obj.get('input')] if 'input' in obj else []) or (['Default question?'])
-                samples.append(SampleData(context=obj.get('context', ""), questions=qs, sample_id=str(idx), task=obj.get('task', default_task)))
+                samples.append(SampleData(
+                    context=obj.get('context', ""),
+                    questions=qs,
+                    sample_id=str(obj.get('sample_id', idx)),
+                    task=obj.get('task', default_task),
+                    answer_prefix=obj.get('answer_prefix', ""),
+                ))
             except: continue
             if len(samples) >= 200: break 
     return samples
@@ -372,7 +379,7 @@ def process_samples(config_obj, samples):
         
         for q_idx, question in enumerate(sample.questions):
             suffix_tokens = tokenizer.encode(
-                question + config_obj.answer_prefix,
+                question + (sample.answer_prefix or config_obj.answer_prefix),
                 add_special_tokens=False,
                 return_tensors="pt",
             ).to(model.device)
