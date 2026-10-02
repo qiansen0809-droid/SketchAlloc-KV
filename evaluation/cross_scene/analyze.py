@@ -164,17 +164,17 @@ def oracle_headroom(grouped, official_profile, raw_root: Path, *, sink: int, win
             )
             if oracle.shape[:2] != official_profile.shape or oracle.shape[-1] != pair.context_length:
                 raise ValueError(f"{pair.pair_id}: oracle shape changed")
-            end = pair.context_length - window if window else pair.context_length
-            middle = oracle[..., sink:end]
             counts = keep_counts(official_profile, pair.context_length)
-            middle_counts = counts - sink - window
-            sorted_oracle = np.sort(middle, axis=-1)[..., ::-1]
+            # Post-hoc upper bound at the exact official per-head budgets:
+            # select directly by oracle over all cached positions. This stays
+            # valid when a transferred profile maps below sink+window.
+            sorted_oracle = np.sort(oracle, axis=-1)[..., ::-1]
             ideal_prefix = np.concatenate((
                 np.zeros((*official_profile.shape, 1), dtype=np.float64),
                 np.cumsum(sorted_oracle, axis=-1, dtype=np.float64),
             ), axis=-1)
             ideal_kept = np.take_along_axis(
-                ideal_prefix, middle_counts[..., None], axis=-1
+                ideal_prefix, counts[..., None], axis=-1
             )[..., 0].sum()
             total = pair.prefix_utility[..., -1].sum()
             ideal_token_loss = float(1.0 - ideal_kept / total)
