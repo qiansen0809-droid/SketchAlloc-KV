@@ -5,6 +5,7 @@ import multiprocessing as mp
 import os
 
 import numpy as np
+import torch
 from tqdm import tqdm
 
 
@@ -164,24 +165,30 @@ def compute_optimal_budget_for_pair(
 
 def exact_runtime_keep_counts(local_prune_ratios, length):
     """
-    Reproduce LUPress._curve_keep_counts for one layer.
+    Reproduce LUPress._curve_keep_counts for one layer exactly.
 
-    LU-KV stores static per-head prune ratios. At runtime those ratios are
-    converted to integer keep counts by flooring each head and distributing
-    the rounded layer-level remainder to the largest fractional parts.
+    Runtime LUPress first converts the stored profile to torch.float32, then
+    computes ideal counts, rounds the layer total with torch.round, floors
+    each head, and distributes the remainder using torch.topk. NumPy float64
+    can differ by one kept entry near rounding boundaries, so mirror the
+    runtime arithmetic here.
     """
-    ratios = np.asarray(local_prune_ratios, dtype=np.float64)
+    ratios = torch.as_tensor(local_prune_ratios, dtype=torch.float32)
     ideal = (1.0 - ratios) * length
-    total_keep_target = int(np.round(ideal.sum()))
-    keep_counts = np.floor(ideal).astype(np.int64)
+    total_keep_target = int(torch.round(ideal.sum()).item())
+    keep_counts = torch.floor(ideal).long()
 
-    remainder = total_keep_target - int(keep_counts.sum())
+    remainder = total_keep_target - int(keep_counts.sum().item())
     if remainder > 0:
         fractional = ideal - keep_counts
-        order = np.argsort(-fractional, kind="stable")
-        keep_counts[order[: min(remainder, len(keep_counts))]] += 1
+        num_to_distribute = min(remainder, keep_counts.numel())
+        if num_to_distribute > 0:
+            top_k_indices = torch.topk(
+                fractional, k=num_to_distribute
+            ).indices
+            keep_counts[top_k_indices] += 1
 
-    return np.clip(keep_counts, 1, length)
+    return keep_counts.clamp(min=1, max=length).cpu().numpy()
 
 
 def compute_boundary_marginals_for_pair(
